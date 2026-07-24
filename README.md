@@ -239,7 +239,7 @@ npm run dev
 | Phase | What Was Built | Status | Date |
 |---|---|---|---|
 | **Phase 0** — Foundations | Project skeleton, GitHub App registration, MongoDB Atlas setup, Express boilerplate, Vite React boilerplate | ✅ Complete | Jul 2026 |
-| **Phase 1** — Webhook Integration | Webhook signature verification, GitHub App JWT auth, PR diff fetcher, event queue | ⏳ Upcoming | — |
+| **Phase 1** — Webhook Integration | Webhook signature verification, GitHub App JWT auth, PR diff fetcher, event queue | ✅ Complete | Jul 2026 |
 | **Phase 2** — AI Analysis | Diff chunker, context fetcher, prompt builder, OpenAI structured output, analysis orchestrator | ⏳ Upcoming | — |
 | **Phase 3** — Post & Store | GitHub PR review comment poster, MongoDB persistence layer | ⏳ Upcoming | — |
 | **Phase 4** — Dashboard | React dashboard, REST API endpoints, charts, PR drilldown | ⏳ Upcoming | — |
@@ -254,9 +254,9 @@ npm run dev
 
 | Concept | Phase | Key Insight |
 |---|---|---|
-| GitHub App vs. PAT vs. OAuth App | Phase 0 | _To be filled_ |
-| HMAC-SHA256 webhook signature verification | Phase 1 | _To be filled_ |
-| JWT → Installation Access Token flow | Phase 1 | _To be filled_ |
+| GitHub App vs. PAT vs. OAuth App | Phase 0 | A GitHub App is an independent identity (not tied to your personal account). It uses a private key + JWT to authenticate, generates short-lived scoped tokens per repo installation. PATs are tied to a user account and don't expire unless revoked — dangerous for automation. |
+| HMAC-SHA256 webhook signature verification | Phase 1 | GitHub signs every webhook payload with your secret using HMAC-SHA256 and sends the result in `X-Hub-Signature-256`. You recompute it independently and compare with `crypto.timingSafeEqual()` — not `===` — to prevent timing attacks where response time leaks how many characters matched. |
+| JWT → Installation Access Token flow | Phase 1 | You sign a short-lived JWT (10 min) with your App's RSA private key. Exchange it with GitHub for an Installation Token (1 hr, scoped to one repo). Cache the Installation Token — regenerating it on every webhook wastes an API call. |
 | Context window budgeting for LLMs | Phase 2 | _To be filled_ |
 | OpenAI structured output (JSON mode) | Phase 2 | _To be filled_ |
 | GitHub PR Review API vs. PR Comments API | Phase 3 | _To be filled_ |
