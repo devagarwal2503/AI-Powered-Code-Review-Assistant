@@ -21,6 +21,7 @@ const { verifyWebhookSignature } = require('../github/webhookVerifier');
 const { enqueue } = require('../utils/queue');
 const { getInstallationToken } = require('../github/auth');
 const { fetchPRFiles } = require('../github/api');
+const { analyzePR } = require('../analysis/analysisOrchestrator');
 
 const router = express.Router();
 
@@ -97,8 +98,26 @@ router.post(
           })),
         });
 
-        // ── Phase 2 hook: AI analysis will be inserted here ──────────────────
-        // analysisOrchestrator.analyze({ files, headSha, owner, repo, token });
+        // ── Phase 2: AI analysis ─────────────────────────────────────────────
+        const analysis = await analyzePR({
+          files,
+          owner,
+          repo,
+          pullNumber,
+          prTitle: jobContext.prTitle,
+          headSha,
+          token,
+        });
+
+        logger.info('Analysis result', {
+          owner, repo, pullNumber,
+          findingCount: analysis.findings.length,
+          summary: analysis.summary,
+        });
+
+        // ── Phase 3 hook: post comments to PR + save to MongoDB ──────────────
+        // reviewPoster.postReview({ owner, repo, pullNumber, headSha, token, analysis });
+        // reviewStore.saveReview({ owner, repo, pullNumber, headSha, analysis });
 
       } catch (err) {
         logger.error('PR analysis job failed', {
