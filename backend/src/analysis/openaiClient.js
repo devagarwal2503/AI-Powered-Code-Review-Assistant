@@ -37,9 +37,24 @@ const { config } = require('../utils/config');
 const logger = require('../utils/logger');
 const { estimateTokens } = require('./diffChunker');
 
-const openai = new OpenAI({
-  apiKey: config.OPENAI_API_KEY,
-});
+// Lazy client — created on first use, not at module load time.
+// Why lazy? new OpenAI({...}) throws immediately if the API key is missing.
+// If we do this at module level, a missing key crashes the whole server
+// on startup (even if no webhook has fired yet). Lazy init means the error
+// only surfaces when we actually try to call the API — much easier to debug.
+let _openai = null;
+
+function getOpenAIClient() {
+  if (!_openai) {
+    if (!config.OPENAI_API_KEY) {
+      throw new Error(
+        'OPENAI_API_KEY is not set. Add it to your backend/.env file.'
+      );
+    }
+    _openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 const MAX_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 1000;
@@ -69,7 +84,7 @@ async function callOpenAI(systemPrompt, userPrompt, options = {}) {
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const response = await openai.chat.completions.create({
+      const response = await getOpenAIClient().chat.completions.create({
         model,
         temperature: 0,       // deterministic, analytical output
         max_tokens: maxTokens,
