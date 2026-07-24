@@ -22,6 +22,8 @@ const { enqueue } = require('../utils/queue');
 const { getInstallationToken } = require('../github/auth');
 const { fetchPRFiles } = require('../github/api');
 const { analyzePR } = require('../analysis/analysisOrchestrator');
+const { postReview } = require('../review/reviewPoster');
+const { saveReview, markReviewPosted, markReviewPostFailed } = require('../review/reviewStore');
 
 const router = express.Router();
 
@@ -115,9 +117,46 @@ router.post(
           summary: analysis.summary,
         });
 
-        // ── Phase 3 hook: post comments to PR + save to MongoDB ──────────────
-        // reviewPoster.postReview({ owner, repo, pullNumber, headSha, token, analysis });
-        // reviewStore.saveReview({ owner, repo, pullNumber, headSha, analysis });
+        // ── Phase 3: Save to MongoDB ─────────────────────────────────────────
+        // We save BEFORE posting to GitHub so we have a record even if posting fails.
+        const savedReview = await saveReview({
+          owner,
+          repo,
+          pullNumber,
+          prTitle: jobContext.prTitle,
+          headSha,
+          analysis,
+        });
+
+        // ── Phase 3: Post review comments to GitHub PR ───────────────────────
+        try {
+          const postResult = await postReview({
+            owner,
+            repo,
+            pullNumber,
+            headSha,
+            token,
+            analysis,
+            files, // needed for diff line visibility parsing
+          });
+
+          await markReviewPosted(savedReview._id, postResult.githubReviewId);
+
+          logger.info('Review posted and saved', {
+            owner, repo, pullNumber,
+            githubReviewId: postResult.githubReviewId,
+            inlineComments: postResult.inlineCount,
+            bodyFindings: postResult.bodyCount,
+          });
+        } catch (postErr) {
+          // Posting failed, but we still have the analysis saved in MongoDB.
+          // Log the error and update the record so it can be retried later.
+          await markReviewPostFailed(savedReview._id, postErr.message);
+          logger.error('Failed to post review to GitHub (analysis saved in DB)', {
+            owner, repo, pullNumber,
+            error: postErr.message,
+          });
+        }
 
       } catch (err) {
         logger.error('PR analysis job failed', {
