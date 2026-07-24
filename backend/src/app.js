@@ -26,6 +26,7 @@ const { connectDB } = require('./models/db');
 
 const healthRouter = require('./routes/health');
 const webhookRouter = require('./routes/webhook');
+const apiRouter = require('./routes/api');
 
 // Validate required env vars before doing anything else
 // This will throw and crash immediately if MONGODB_URI is missing —
@@ -65,6 +66,7 @@ app.use((req, res, next) => {
 
 app.use('/health', healthRouter);
 app.use('/webhook', webhookRouter);
+app.use('/api', apiRouter);
 
 // 404 handler — must come after all routes
 app.use((req, res) => {

@@ -1,122 +1,70 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import Dashboard from './pages/Dashboard.jsx';
+import RepoPage  from './pages/RepoPage.jsx';
+import ReviewPage from './pages/ReviewPage.jsx';
+import './index.css';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+function Navbar() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <header className="navbar" role="banner">
+      <div className="navbar-inner">
+        <a href="/" className="navbar-brand">
+          <div className="brand-icon" aria-hidden="true">🤖</div>
+          AI Code Review
+        </a>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <nav className="navbar-nav" aria-label="Main navigation">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+            id="nav-dashboard"
+          >
+            Dashboard
+          </NavLink>
+          <a
+            href="https://github.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nav-link"
+            id="nav-github"
+          >
+            GitHub ↗
+          </a>
+        </nav>
+      </div>
+    </header>
+  );
 }
 
-export default App
+// Scroll to top on route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <div className="layout">
+        <Navbar />
+        <main>
+          <Routes>
+            <Route path="/"                      element={<Dashboard />} />
+            <Route path="/repos/:owner/:repo"    element={<RepoPage />}  />
+            <Route path="/reviews/:reviewId"     element={<ReviewPage />} />
+            <Route path="*" element={
+              <div className="page-content" style={{ textAlign: 'center', paddingTop: '4rem' }}>
+                <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>404</p>
+                <p style={{ color: 'var(--text-secondary)' }}>Page not found</p>
+                <a href="/" style={{ display: 'block', marginTop: '1rem' }}>← Back to Dashboard</a>
+              </div>
+            } />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
+  );
+}

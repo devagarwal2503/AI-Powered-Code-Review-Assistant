@@ -241,7 +241,7 @@ npm run dev
 | **Phase 0** — Foundations | Project skeleton, GitHub App registration, MongoDB Atlas setup, Express boilerplate, Vite React boilerplate | ✅ Complete | Jul 2026 |
 | **Phase 1** — Webhook Integration | Webhook signature verification, GitHub App JWT auth, PR diff fetcher, event queue | ✅ Complete | Jul 2026 |
 | **Phase 2** — AI Analysis | Diff chunker, context fetcher, prompt builder, OpenAI structured output, analysis orchestrator | ✅ Complete | Jul 2026 |
-| **Phase 3** — Post & Store | GitHub PR review comment poster, MongoDB persistence layer | ⏳ Upcoming | — |
+| **Phase 3** — Post & Store | GitHub PR review comment poster, MongoDB persistence layer | ✅ Complete | Jul 2026 |
 | **Phase 4** — Dashboard | React dashboard, REST API endpoints, charts, PR drilldown | ⏳ Upcoming | — |
 | **Phase 5** — CI/CD & Deploy | GitHub Actions, Render deploy, Vercel deploy, Winston logging | ⏳ Upcoming | — |
 | **Phase 6** — Benchmark | 15–20 PR analysis, overlap metrics, resume bullets | ⏳ Upcoming | — |
@@ -259,7 +259,7 @@ npm run dev
 | JWT → Installation Access Token flow | Phase 1 | You sign a short-lived JWT (10 min) with your App's RSA private key. Exchange it with GitHub for an Installation Token (1 hr, scoped to one repo). Cache the Installation Token — regenerating it on every webhook wastes an API call. |
 | Context window budgeting for LLMs | Phase 2 | LLMs have a hard token limit. We budget 50k tokens per chunk (1 token ≈ 4 chars) with a 25% safety margin. Priority order: diff itself → ±25 lines of surrounding context → rest of file skipped. Chunking lets us handle PRs with many changed files without hitting the limit. |
 | OpenAI structured output (JSON mode) | Phase 2 | `response_format: { type: "json_object" }` guarantees the model returns valid parseable JSON — no markdown fences, no preamble. Without it, the model wraps JSON in ` ```json ``` ` blocks and `JSON.parse()` crashes. You must still say "return JSON" somewhere in the prompt (OpenAI requirement), but the format is guaranteed. |
-| GitHub PR Review API vs. PR Comments API | Phase 3 | _To be filled_ |
+| GitHub PR Review API vs. PR Comments API | Phase 3 | Three separate GitHub APIs look similar but behave differently. A PR Review bundles all inline comments into one atomic submission — if any comment references a line not in the diff, the entire request fails with 422. Solution: parse the unified diff patch before submitting to build a set of visible line numbers, then split findings into inline comments (visible lines) vs. review body text (non-visible lines). |
 | MongoDB aggregation pipelines | Phase 4 | _To be filled_ |
 | GitHub Actions CI/CD | Phase 5 | _To be filled_ |
 
