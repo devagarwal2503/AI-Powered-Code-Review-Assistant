@@ -12,8 +12,8 @@
 
 | Service | URL | Status |
 |---|---|---|
-| Dashboard | _Coming in Phase 4_ | 🔧 In Progress |
-| Backend API | _Coming in Phase 5_ | 🔧 In Progress |
+| Dashboard (Vercel) | _Deploy in Phase 5_ | 🏗️ Built, deploying soon |
+| Backend API (Render) | _Deploy in Phase 5_ | 🏗️ Built, deploying soon |
 
 > **Note:** The backend is hosted on Render's free tier. First load may take ~30 seconds to wake up — subsequent requests are fast.
 
@@ -107,27 +107,53 @@ This tool bridges the gap: it doesn't replace human reviewers, it gives them a p
 
 ```
 ai-code-review-assistant/
-├── backend/                  # Node.js + Express API
+├── backend/
 │   ├── src/
-│   │   ├── github/           # GitHub App auth, webhook handler, API client
-│   │   ├── analysis/         # Diff chunker, context fetcher, prompt builder, OpenAI client
-│   │   ├── review/           # Review poster, review store
-│   │   ├── api/              # REST API routes for dashboard
-│   │   ├── models/           # MongoDB schemas
-│   │   └── utils/            # Logger, error handler, config
-│   ├── tests/
+│   │   ├── github/
+│   │   │   ├── auth.js           # JWT signing + installation token caching
+│   │   │   ├── api.js            # GitHub REST API calls (fetch PR files, post review)
+│   │   │   └── webhookVerifier.js # HMAC-SHA256 signature check
+│   │   ├── analysis/
+│   │   │   ├── analysisOrchestrator.js  # Coordinates the full analysis pipeline
+│   │   │   ├── diffChunker.js           # Splits large diffs into token-safe chunks
+│   │   │   ├── contextFetcher.js        # Fetches ±25 lines of surrounding context
+│   │   │   ├── promptBuilder.js         # Constructs the OpenAI system+user prompt
+│   │   │   └── openaiClient.js          # Lazy-init OpenAI client with retry logic
+│   │   ├── review/
+│   │   │   ├── reviewPoster.js   # Posts findings as GitHub PR review comments
+│   │   │   └── reviewStore.js    # MongoDB read/write for reviews and findings
+│   │   ├── models/
+│   │   │   ├── Review.js         # Mongoose schema (embedded findings, denorm counts)
+│   │   │   └── db.js             # MongoDB connection with structured logging
+│   │   ├── routes/
+│   │   │   ├── webhook.js        # PR event handler + in-memory job queue
+│   │   │   ├── api.js            # REST API for dashboard (repos, reviews, stats)
+│   │   │   └── health.js         # Health check endpoint
+│   │   └── utils/
+│   │       ├── config.js         # Env var validation + typed config object
+│   │       ├── logger.js         # Winston structured JSON logger
+│   │       └── queue.js          # Serial in-memory job queue
 │   └── package.json
-├── frontend/                 # React + Vite dashboard
+├── frontend/
 │   ├── src/
-│   │   ├── pages/            # Overview, RepoDetail, PRDrilldown
-│   │   ├── components/       # Charts, tables, cards
-│   │   └── api/              # API client for backend
+│   │   ├── pages/
+│   │   │   ├── Dashboard.jsx     # Overview: repo cards, global stats
+│   │   │   ├── RepoPage.jsx      # Per-repo: charts + paginated review list
+│   │   │   └── ReviewPage.jsx    # PR drilldown: findings with filter tabs
+│   │   ├── components/
+│   │   │   ├── FindingCard.jsx   # Expandable accordion per finding
+│   │   │   ├── Charts.jsx        # Pure SVG TrendChart + CSS CategoryChart
+│   │   │   └── ui.jsx            # Shared: Spinner, Badge, Breadcrumb, icons
+│   │   ├── services/
+│   │   │   └── api.js            # Fetch wrapper for all backend endpoints
+│   │   ├── App.jsx               # BrowserRouter + Navbar + route definitions
+│   │   └── index.css             # Full design system (tokens, layout, components)
+│   ├── vite.config.js            # Dev proxy: /api → localhost:3000
 │   └── package.json
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml            # Lint + test on every PR
-│       └── deploy.yml        # Deploy on merge to main
-├── .env.example              # Environment variable template (no secrets)
+│       └── ci.yml                # Coming in Phase 5
+├── .env.example
 ├── README.md
 └── LICENSE
 ```
@@ -242,7 +268,7 @@ npm run dev
 | **Phase 1** — Webhook Integration | Webhook signature verification, GitHub App JWT auth, PR diff fetcher, event queue | ✅ Complete | Jul 2026 |
 | **Phase 2** — AI Analysis | Diff chunker, context fetcher, prompt builder, OpenAI structured output, analysis orchestrator | ✅ Complete | Jul 2026 |
 | **Phase 3** — Post & Store | GitHub PR review comment poster, MongoDB persistence layer | ✅ Complete | Jul 2026 |
-| **Phase 4** — Dashboard | React dashboard, REST API endpoints, charts, PR drilldown | ⏳ Upcoming | — |
+| **Phase 4** — Dashboard | React dashboard, REST API endpoints, pure-SVG charts, PR drilldown, "View on GitHub" links, full design system | ✅ Complete | Jul 2026 |
 | **Phase 5** — CI/CD & Deploy | GitHub Actions, Render deploy, Vercel deploy, Winston logging | ⏳ Upcoming | — |
 | **Phase 6** — Benchmark | 15–20 PR analysis, overlap metrics, resume bullets | ⏳ Upcoming | — |
 
@@ -260,7 +286,9 @@ npm run dev
 | Context window budgeting for LLMs | Phase 2 | LLMs have a hard token limit. We budget 50k tokens per chunk (1 token ≈ 4 chars) with a 25% safety margin. Priority order: diff itself → ±25 lines of surrounding context → rest of file skipped. Chunking lets us handle PRs with many changed files without hitting the limit. |
 | OpenAI structured output (JSON mode) | Phase 2 | `response_format: { type: "json_object" }` guarantees the model returns valid parseable JSON — no markdown fences, no preamble. Without it, the model wraps JSON in ` ```json ``` ` blocks and `JSON.parse()` crashes. You must still say "return JSON" somewhere in the prompt (OpenAI requirement), but the format is guaranteed. |
 | GitHub PR Review API vs. PR Comments API | Phase 3 | Three separate GitHub APIs look similar but behave differently. A PR Review bundles all inline comments into one atomic submission — if any comment references a line not in the diff, the entire request fails with 422. Solution: parse the unified diff patch before submitting to build a set of visible line numbers, then split findings into inline comments (visible lines) vs. review body text (non-visible lines). |
-| MongoDB aggregation pipelines | Phase 4 | _To be filled_ |
+| MongoDB aggregation pipelines | Phase 4 | `$unwind` deconstructs an embedded array into one document per element, enabling `$group` to aggregate across findings from multiple reviews. We use this to build the category breakdown chart (`$unwind findings → $group by findings.category → $sum: 1`). Denormalizing `findingCounts` at write time (instead of computing on every read) avoids re-running `$unwind` on dashboard load — a trade-off: data duplication vs. read performance. At our scale, the cache is always correct because reviews are written once and never edited. |
+| Vite dev proxy vs. CORS headers | Phase 4 | When the frontend (`:5173`) calls the backend (`:3000`), the browser's same-origin policy blocks the request unless the backend sends CORS headers. Two solutions: (1) add `cors()` middleware to Express, or (2) configure Vite's `server.proxy` to route `/api/*` to `:3000`. Vite proxy is better in development — the request appears same-origin to the browser, no preflight `OPTIONS` request is made, and you don't need to keep the frontend URL in backend config. In production (Vercel → Render), real CORS headers are needed and already configured. |
+| SVG charts vs. chart library | Phase 4 | For this dashboard's two charts (horizontal bar + stacked bar), adding Chart.js or Recharts (100-300 KB minified) is unjustified. Pure SVG gives full design control, zero bundle cost, and is trivially themeable with CSS variables. The trade-off: manual axis/scaling calculations. Decision rule: use a library when you need 5+ chart types, interaction (zoom/brush), or real-time streaming. For 2 simple charts in a portfolio project, roll your own. |
 | GitHub Actions CI/CD | Phase 5 | _To be filled_ |
 
 ---
@@ -336,6 +364,88 @@ function getOpenAIClient() {
 **Validation:** The model's response is *correct calibration*. If it had hallucinated findings on a README change, that would be the problem. Zero findings on non-code changes = the severity calibration and "skip these" instructions are working.
 
 **Lesson:** Test AI output with *known-good* changes first (expect 0 findings), then test with *deliberately flawed* code (expect findings). Both are needed to validate that the system is calibrated, not just that it produces output.
+
+---
+
+### Phase 4: "The first design looks like AI slop"
+**What happened:** After building the full dashboard, the user's reaction was direct: *"The UI is not up to mark — it is like AI slop design."* The specific complaints: generic colors, emoji used as icons, no visual identity, timid typography.
+
+**Root cause:** The v1 design used GitHub's exact color palette (`#0d1117`, `#161b22`) — which is a recognizable GitHub clone, not an original product. Emoji icons (`📦 🔍 📋`) are inconsistently rendered across OS/browser and look out of place on a technical dark-mode dashboard.
+
+**Fix:** Complete visual redesign from scratch:
+- **Color identity:** Deep navy (`#040812`) with an indigo→violet gradient brand accent (`#6366f1` → `#8b5cf6`). Not GitHub blue, not generic teal — a distinctive personality.
+- **Icons:** SVG-only. The logo mark is a `<>` code-bracket SVG with a gradient fill. Severity indicators are colored dots, not emoji circles.
+- **Typography:** 800-weight hero titles, `-0.04em` tracking on stat numbers, tabular-nums for dashboards.
+- **Depth:** Three background levels, glowing top borders on stat cards matched to severity color, subtle radial gradient behind the hero section.
+- **Severity mini-bar:** 4px proportional bar on repo cards showing high/medium/low distribution at a glance — more information density without more words.
+
+**Lesson:** Design systems need a deliberate identity — not just a color swap from an existing product. The question to ask first is: *if someone saw a screenshot of this UI with no labels, would they recognize it as something distinct, or assume it's a GitHub UI component?* The answer determines whether you're designing or copying.
+
+---
+
+### Phase 4: Emoji as UI icons — why they fail
+**What happened:** v1 used emoji as card icons (📦 for repo, 🔍 for findings, 📋 for reviews). On closer inspection they look out of place on a dark technical dashboard.
+
+**Root cause:** Emoji are rendered by the OS, not the browser. On Windows they look different than on Mac, different on Android. They also don't inherit CSS `color`, can't be styled, and are fixed size. On a dark background with carefully chosen brand colors, emoji introduce uncontrolled visual noise.
+
+**Fix:** All icons replaced with inline SVG elements that:
+- Inherit `currentColor` (can be themed with CSS)
+- Scale with `width`/`height` attributes
+- Are 100% consistent across all platforms
+- Render crisply at any pixel density
+
+**Lesson:** In production web applications, always use SVG icons (inline SVG, icon component library, or SVG sprite). Emoji belong in text/chat contexts, not in UI chrome.
+
+---
+
+### Phase 4: CORS error when calling backend from Vite dev server
+**What happened:** After starting both servers (`npm run dev` in backend on `:3000`, frontend on `:5173`), the first API call from the React app returned a browser CORS error: *"Access to fetch at 'http://localhost:3000/api/repos' from origin 'http://localhost:5173' has been blocked by CORS policy."*
+
+**Root cause:** Browsers block cross-origin requests unless the server explicitly allows them. The backend already had `cors()` middleware configured for production URLs, but the dev frontend URL wasn't in the allowed list.
+
+**Fix:** Added Vite proxy to `vite.config.js`:
+```javascript
+server: {
+  proxy: {
+    '/api': { target: 'http://localhost:3000', changeOrigin: true }
+  }
+}
+```
+Now all `/api/*` requests from the React app are forwarded by Vite to the backend — the browser sees the request as same-origin (`:5173`), so no CORS check is performed. No backend changes needed.
+
+**Lesson:** In a monorepo with separate frontend/backend dev servers, Vite proxy is the cleanest development solution. Save CORS headers for the actual production cross-origin scenario.
+
+---
+
+### Phase 4: `require()` inside a React component caused a runtime error
+**What happened:** The initial `ScrollToTop` component (which scrolls the page to the top on route change) used `require('react').useEffect(...)` inside the component body — a remnant of a bad copy-paste. The app crashed with `useEffect is not a function`.
+
+**Root cause:** `require('react')` in an ES module context (Vite uses `import`) returns an object, but in a JSX file that mix of module systems doesn't resolve the hook correctly. More fundamentally, hooks should always be imported at the top of the file, not required inline.
+
+**Fix:** Added `import { useEffect } from 'react'` at the top of `App.jsx` and removed the inline `require()`.
+
+**Lesson:** Never use `require()` inside a React component. Always import at the module top level. `useEffect` called from a `require()` result bypasses React's rules-of-hooks static analysis — if the linter doesn't catch it, it will surface as a confusing runtime error.
+
+---
+
+## 🎨 Frontend Architecture Decisions
+
+> Why each technical choice was made — useful for technical interviews.
+
+### No Tailwind CSS
+Vanilla CSS with custom properties gives full control over every pixel without fighting utility class specificity. For a portfolio project with a custom design system, Tailwind's presets constrain more than they help. The CSS file documents the intent of every token — `--sev-high-bd` is more readable than `border-[rgba(248,113,113,0.25)]`.
+
+### No chart library (Chart.js, Recharts, etc.)
+For two chart types (horizontal bar + stacked bar), a 200KB+ library is unjustified. Pure SVG for the trend chart and CSS `flex` for the category chart keeps the bundle small and shows understanding of layout primitives. The rule: use a library when you need 5+ chart types, zooming/brushing, or real-time data streaming.
+
+### React Router (history mode, not hash mode)
+History mode (`/repos/devagarwal2503/ai-review-test`) is cleaner than hash mode (`#/repos/...`). It requires the server to serve `index.html` for all paths — handled by Vite in dev and by Vercel's rewrite config in production (added in Phase 5).
+
+### Vite proxy instead of CORS middleware
+In development, Vite's `server.proxy` makes frontend API calls appear same-origin, avoiding CORS preflight entirely. In production, Vercel and Render are on different domains, so real CORS headers are needed on the Express app — and they're already configured.
+
+### `save-before-post` pattern in webhook handler
+MongoDB is written *before* posting to GitHub. If the GitHub API call fails (rate limit, network error), the analysis result is still in the database — visible in the dashboard and retryable. If the order were reversed and GitHub succeeded but MongoDB failed, the data would be lost forever with no indication to the user.
 
 ---
 
