@@ -209,7 +209,7 @@ npm run dev
 
 | Phase | What Was Built | Status | Date |
 |---|---|---|---|
-| **Phase 0** — Foundations | Project skeleton, GitHub App registration, MongoDB Atlas setup, Express boilerplate, Vite React boilerplate | 🔧 In Progress | Jul 2026 |
+| **Phase 0** — Foundations | Project skeleton, GitHub App registration, MongoDB Atlas setup, Express boilerplate, Vite React boilerplate | ✅ Complete | Jul 2026 |
 | **Phase 1** — Webhook Integration | Webhook signature verification, GitHub App JWT auth, PR diff fetcher, event queue | ⏳ Upcoming | — |
 | **Phase 2** — AI Analysis | Diff chunker, context fetcher, prompt builder, OpenAI structured output, analysis orchestrator | ⏳ Upcoming | — |
 | **Phase 3** — Post & Store | GitHub PR review comment poster, MongoDB persistence layer | ⏳ Upcoming | — |
