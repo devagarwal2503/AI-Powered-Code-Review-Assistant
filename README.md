@@ -240,7 +240,7 @@ npm run dev
 |---|---|---|---|
 | **Phase 0** — Foundations | Project skeleton, GitHub App registration, MongoDB Atlas setup, Express boilerplate, Vite React boilerplate | ✅ Complete | Jul 2026 |
 | **Phase 1** — Webhook Integration | Webhook signature verification, GitHub App JWT auth, PR diff fetcher, event queue | ✅ Complete | Jul 2026 |
-| **Phase 2** — AI Analysis | Diff chunker, context fetcher, prompt builder, OpenAI structured output, analysis orchestrator | ⏳ Upcoming | — |
+| **Phase 2** — AI Analysis | Diff chunker, context fetcher, prompt builder, OpenAI structured output, analysis orchestrator | ✅ Complete | Jul 2026 |
 | **Phase 3** — Post & Store | GitHub PR review comment poster, MongoDB persistence layer | ⏳ Upcoming | — |
 | **Phase 4** — Dashboard | React dashboard, REST API endpoints, charts, PR drilldown | ⏳ Upcoming | — |
 | **Phase 5** — CI/CD & Deploy | GitHub Actions, Render deploy, Vercel deploy, Winston logging | ⏳ Upcoming | — |
@@ -257,11 +257,85 @@ npm run dev
 | GitHub App vs. PAT vs. OAuth App | Phase 0 | A GitHub App is an independent identity (not tied to your personal account). It uses a private key + JWT to authenticate, generates short-lived scoped tokens per repo installation. PATs are tied to a user account and don't expire unless revoked — dangerous for automation. |
 | HMAC-SHA256 webhook signature verification | Phase 1 | GitHub signs every webhook payload with your secret using HMAC-SHA256 and sends the result in `X-Hub-Signature-256`. You recompute it independently and compare with `crypto.timingSafeEqual()` — not `===` — to prevent timing attacks where response time leaks how many characters matched. |
 | JWT → Installation Access Token flow | Phase 1 | You sign a short-lived JWT (10 min) with your App's RSA private key. Exchange it with GitHub for an Installation Token (1 hr, scoped to one repo). Cache the Installation Token — regenerating it on every webhook wastes an API call. |
-| Context window budgeting for LLMs | Phase 2 | _To be filled_ |
-| OpenAI structured output (JSON mode) | Phase 2 | _To be filled_ |
+| Context window budgeting for LLMs | Phase 2 | LLMs have a hard token limit. We budget 50k tokens per chunk (1 token ≈ 4 chars) with a 25% safety margin. Priority order: diff itself → ±25 lines of surrounding context → rest of file skipped. Chunking lets us handle PRs with many changed files without hitting the limit. |
+| OpenAI structured output (JSON mode) | Phase 2 | `response_format: { type: "json_object" }` guarantees the model returns valid parseable JSON — no markdown fences, no preamble. Without it, the model wraps JSON in ` ```json ``` ` blocks and `JSON.parse()` crashes. You must still say "return JSON" somewhere in the prompt (OpenAI requirement), but the format is guaranteed. |
 | GitHub PR Review API vs. PR Comments API | Phase 3 | _To be filled_ |
 | MongoDB aggregation pipelines | Phase 4 | _To be filled_ |
 | GitHub Actions CI/CD | Phase 5 | _To be filled_ |
+
+---
+
+## 🐛 Challenges & How We Solved Them
+
+> Real problems hit during development — documented for learning and to show engineering judgment, not just happy-path coding.
+
+### Phase 0: MongoDB connection string run as a terminal command
+**What happened:** The Atlas connection string (`mongodb+srv://user:pass@host/...`) was accidentally pasted into the terminal as a command instead of into the `.env` file. PowerShell threw a `CommandNotFoundException`.
+
+**Root cause:** Confusion between "where does this value go" — the connection string is a *value for a config file*, not a command.
+
+**Fix:** Created the `.env` file with the `MONGODB_URI=` key already present, so the user only needs to paste after the `=`. Added a clear security rule to the README: *never paste secrets into a terminal or chat*.
+
+**Lesson:** Make the "pit of success" obvious. Pre-creating `.env` with placeholder keys means the correct action (fill in the value after `=`) is the path of least resistance.
+
+---
+
+### Phase 0: MongoDB Atlas IP whitelist blocking connection
+**What happened:** Server started but immediately logged `"querySrv ECONNREFUSED _mongodb._tcp.cluster0..."` and exited.
+
+**Root cause:** MongoDB Atlas clusters deny all connections by default. The cluster's Network Access list had no entries, so DNS SRV resolution for the cluster hostname was refused at the network level.
+
+**Fix:** Added `0.0.0.0/0` (allow all IPs) to Atlas Network Access for development. Will restrict to Render's IP range in Phase 5.
+
+**Lesson:** `ECONNREFUSED` on a `_mongodb._tcp.*` hostname is almost always an Atlas IP whitelist issue, not a code bug. Recognizing infrastructure errors vs. application errors saves significant debugging time.
+
+---
+
+### Phase 0: MongoDB connected to `test` database instead of `ai_code_review`
+**What happened:** Logs showed `"db":"test"` instead of `"db":"ai_code_review"`. Data would have been written to the wrong database.
+
+**Root cause:** The MongoDB connection string was missing the database name. Format requires: `...mongodb.net/<dbname>?...`. Without `<dbname>`, MongoDB defaults to `test`.
+
+**Fix:** Added `ai_code_review` to the URI immediately before the `?`: `...mongodb.net/ai_code_review?ssl=true...`
+
+**Lesson:** Always verify the connected database name in your startup log. Add it explicitly to your structured log output so it's visible on every start.
+
+---
+
+### Phase 2: OpenAI SDK crashed entire server on startup with missing API key
+**What happened:** Server crashed at startup with a stack trace pointing to `openaiClient.js:40` — the line `new OpenAI({ apiKey: ... })`. Error message mentioned `workloadIdentity`, `adminAPIKey` (fragments of the SDK's error for missing key).
+
+**Root cause:** The OpenAI client was initialized at **module load time** (top-level `const openai = new OpenAI({...})`). This code runs when the module is first `require()`d, before any webhook fires. If the API key is missing or env vars haven't loaded yet, the SDK throws immediately — crashing the whole server before it can even serve requests.
+
+**Fix:** Switched to **lazy initialization** — the client is created on first use inside a `getOpenAIClient()` function. If the key is missing, the error surfaces only when a PR is analyzed (with a clear error message), not at startup.
+
+```javascript
+// Before (bad): throws at module load time
+const openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
+
+// After (good): throws at call time with a clear message
+let _openai = null;
+function getOpenAIClient() {
+  if (!_openai) {
+    if (!config.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not set');
+    _openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
+  }
+  return _openai;
+}
+```
+
+**Lesson:** Never initialize third-party clients at module level if their constructor can throw. Use lazy initialization so startup failures are isolated to the feature that needs them, not the entire server.
+
+---
+
+### Phase 2: AI returned 0 findings — is this a bug?
+**What happened:** First live analysis returned `"findingCount":0` and `"summary":"No significant issues found"`. Initial reaction: is the prompt wrong? Is the model not working?
+
+**Root cause:** Not a bug. The PR contained only a `README.md` and `hello.html` change — documentation and a trivial HTML file. There are genuinely no code-level issues to flag. The prompt explicitly instructs the model to skip non-issues.
+
+**Validation:** The model's response is *correct calibration*. If it had hallucinated findings on a README change, that would be the problem. Zero findings on non-code changes = the severity calibration and "skip these" instructions are working.
+
+**Lesson:** Test AI output with *known-good* changes first (expect 0 findings), then test with *deliberately flawed* code (expect findings). Both are needed to validate that the system is calibrated, not just that it produces output.
 
 ---
 
