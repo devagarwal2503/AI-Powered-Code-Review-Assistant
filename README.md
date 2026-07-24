@@ -136,42 +136,71 @@ ai-code-review-assistant/
 
 ## ⚙️ Setup & Running Locally
 
-> Full setup instructions will be added here as each phase is completed.
-
 ### Prerequisites
 
 - Node.js 18+
 - A GitHub account (to create and install the GitHub App)
 - An OpenAI API key
-- A MongoDB Atlas account (free M0 cluster)
-- [ngrok](https://ngrok.com/) (for local webhook testing)
+- [ngrok](https://ngrok.com/) (for local webhook testing in Phase 1)
 
-### Environment Variables
+---
 
-Copy `.env.example` to `.env` and fill in your values:
+### 1. MongoDB Atlas — Free Cluster Setup
+
+> M0 is permanently free. No credit card required.
+
+1. Go to [mongodb.com/atlas](https://www.mongodb.com/cloud/atlas/register) and sign up (Google login works)
+2. Click **"Build a Cluster"** → select **M0 Free** tier → pick any region → name it anything → **Create**
+3. While it provisions (~2 min), go to **Database Access** → **Add New Database User**
+   - Username: anything (e.g. `appuser`)
+   - Password: click **"Autogenerate Secure Password"** → **Copy** it somewhere safe
+   - Role: **"Read and write to any database"** → **Add User**
+4. Go to **Network Access** → **Add IP Address** → click **"Allow Access From Anywhere"** → **Confirm**
+   *(We'll restrict this to Render's IPs in Phase 5)*
+5. Go to **Database** → **Connect** → **Drivers** → Driver: **Node.js**
+   - Copy the connection string. It looks like:
+     ```
+     mongodb+srv://appuser:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+     ```
+   - Replace `<password>` with the password you copied in step 3
+   - Add a database name before the `?` — use `ai_code_review`:
+     ```
+     mongodb+srv://appuser:YOURPASSWORD@cluster0.xxxxx.mongodb.net/ai_code_review?retryWrites=true&w=majority
+     ```
+   - This full string is your `MONGODB_URI`
+
+---
+
+### 2. Environment Variables
+
+**Important:** The `.env` file holds your real secrets. It is listed in `.gitignore` and will **never** be committed to git. The `.env.example` file (which contains no real values) is what gets committed.
 
 ```bash
+# In the backend/ directory:
 cp .env.example .env
 ```
 
+Then open `backend/.env` and set `MONGODB_URI` to the connection string from step 1 above.
+
 ```env
-# GitHub App
+# backend/.env  ← this file is gitignored, never commit it
+PORT=3000
+NODE_ENV=development
+LOG_LEVEL=debug
+
+MONGODB_URI=mongodb+srv://appuser:YOURPASSWORD@cluster0.xxxxx.mongodb.net/ai_code_review?retryWrites=true&w=majority
+
+# Leave these blank until Phase 1
 GITHUB_APP_ID=
 GITHUB_APP_PRIVATE_KEY_PATH=./private-key.pem
 GITHUB_WEBHOOK_SECRET=
 
-# OpenAI
+# Leave blank until Phase 2
 OPENAI_API_KEY=
-
-# MongoDB
-MONGODB_URI=
-
-# Server
-PORT=3000
-NODE_ENV=development
 ```
 
-### Running the Backend
+> **Security rule:** Never paste a connection string (or any secret) into a terminal command or share it in chat. It belongs only inside `.env`.
+
 
 ```bash
 cd backend
