@@ -11,7 +11,7 @@
 
 services:
   - type: web
-    name: ai-code-review-backend
+    name: scrutineer-ai-backend
     env: node
     region: oregon          # Free tier available in Oregon
     plan: free

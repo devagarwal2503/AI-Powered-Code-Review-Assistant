@@ -9,15 +9,14 @@ function Navbar() {
   return (
     <header className="nav" role="banner">
       <div className="nav-inner">
-        {/* Logo — code brackets with sky gradient background */}
-        <NavLink to="/" className="nav-brand" id="nav-home">
-          <div className="nav-logo" aria-hidden="true">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="16 18 22 12 16 6"/>
-              <polyline points="8 6 2 12 8 18"/>
-            </svg>
-          </div>
-          AI Code Review
+        {/* Logo — Scrutineer AI wordmark */}
+        <NavLink to="/" className="nav-brand" id="nav-home" aria-label="Scrutineer AI — home">
+          <img
+            src="/logo.png"
+            alt="Scrutineer AI"
+            height="28"
+            style={{ display: 'block', imageRendering: 'auto' }}
+          />
         </NavLink>
 
         <nav className="nav-links" aria-label="Main navigation">

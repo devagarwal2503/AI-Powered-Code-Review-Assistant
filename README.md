@@ -2,15 +2,15 @@
 
 <br />
 
-<img src="https://img.shields.io/badge/%3C%2F%3E-AI%20Code%20Review-38bdf8?style=for-the-badge&labelColor=0a0f1e" alt="AI Code Review" height="40" />
+<img src="https://img.shields.io/badge/%3C%2F%3E-Scrutineer-38bdf8?style=for-the-badge&labelColor=0a0f1e" alt="Scrutineer" height="40" />
 
-<h3>AI-Powered Code Review Assistant</h3>
+<h3>Scrutineer — AI-Powered Code Review</h3>
 
-<p>A production-grade GitHub App that automatically reviews pull requests — catching security vulnerabilities, bug risks, and architectural issues before a human opens the diff.</p>
+<p>A production-grade GitHub App that automatically reviews pull requests — catching security vulnerabilities,<br />bug risks, and architectural issues before a human opens the diff.</p>
 
 <br />
 
-[![CI](https://github.com/devagarwal2503/AI-Powered-Code-Review-Assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/devagarwal2503/AI-Powered-Code-Review-Assistant/actions)
+[![CI](https://github.com/devagarwal2503/Scrutineer-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/devagarwal2503/Scrutineer-AI/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/cloud/atlas)
@@ -21,7 +21,7 @@
 
 <br />
 
-[🚀 Live Dashboard](https://ai-powered-code-review-assistant-ten.vercel.app) · [📡 API Health](https://ai-code-review-backend-dsot.onrender.com/health) · [🐛 Issues](https://github.com/devagarwal2503/AI-Powered-Code-Review-Assistant/issues)
+[🚀 Live Dashboard](https://ai-powered-code-review-assistant-ten.vercel.app) · [📡 API Health](https://ai-code-review-backend-dsot.onrender.com/health) · [⚙️ Install Scrutineer](https://github.com/apps/scrutineer-ai) · [🐛 Issues](https://github.com/devagarwal2503/Scrutineer-AI/issues)
 
 <br />
 
@@ -40,6 +40,38 @@
 
 ---
 
+## ⚙️ Install Scrutineer on Your Repository
+
+> Scrutineer is a **public GitHub App** — anyone can install it on their repos in 30 seconds. No backend setup, no API keys, no config.
+
+### One-click install
+
+**[→ Install Scrutineer on GitHub](https://github.com/apps/scrutineer-ai)**
+
+### What happens after you install
+
+1. Choose which repositories Scrutineer can access (one repo or all)
+2. Open (or push to) any pull request on those repos
+3. Scrutineer automatically analyzes the diff — no action needed from you
+4. Inline review comments appear on the **Files Changed** tab within seconds
+5. The findings are visible in the [live dashboard](https://ai-powered-code-review-assistant-ten.vercel.app) under your repo name
+
+### What gets analyzed
+
+Scrutineer catches issues that linters miss — things that require understanding *context*, not just syntax:
+
+| Category | Examples |
+|---|---|
+| 🔴 **Security** | SQL injection, hardcoded secrets, `eval()` on user input, timing attacks |
+| 🟠 **Bug Risk** | Missing `await`, loose equality, unhandled Promise rejection, type coercion |
+| 🟡 **Performance** | N+1 queries, O(n²) loops, missing exponential backoff, synchronous I/O |
+| 🔵 **Architecture** | Violations of separation of concerns, god objects, tight coupling |
+| ⚪ **Style** | `var` usage, debug logs left in, unused variables |
+
+> **Note:** The shared backend uses a single MongoDB instance and OpenAI API key. Each PR analysis costs ~$0.002 (gpt-4o-mini). Fine for team use — not intended for large-scale public traffic.
+
+---
+
 ## 🧩 The Problem This Solves
 
 Manual code review is expensive, inconsistent, and often misses security or architectural issues under time pressure. Existing linting tools catch syntax and style — but not context-sensitive problems like:
@@ -55,22 +87,28 @@ This tool bridges the gap. It doesn't replace human reviewers — it gives them 
 
 ## ⚡ How It Works
 
-```
- Developer                GitHub                   Backend (Render)              Dashboard (Vercel)
-    │                        │                            │                              │
-    │── opens a PR ─────────▶│                            │                              │
-    │                        │── webhook POST /webhook ──▶│                              │
-    │                        │                            │── verify HMAC signature      │
-    │                        │                            │── enqueue analysis job       │
-    │                        │                            │── fetch PR diff + context    │
-    │                        │                            │── chunk into token windows   │
-    │                        │                            │── OpenAI gpt-4o-mini ──────▶ │
-    │                        │                            │◀─ structured JSON findings   │
-    │                        │◀── post inline PR review ──│                              │
-    │◀── review notification ─│                            │── save to MongoDB ──────────▶│
-    │                        │                            │                              │
-    │                        │                            │                     ◀── REST API ──
-    │                        │                            │                    dashboard renders
+```mermaid
+sequenceDiagram
+    participant Dev as 👨‍💻 Developer
+    participant GH as GitHub
+    participant BE as Backend (Render)
+    participant AI as OpenAI
+    participant DB as MongoDB
+    participant FE as Dashboard (Vercel)
+
+    Dev->>GH: Opens Pull Request
+    GH->>BE: POST /webhook (HMAC signed)
+    BE->>BE: Verify HMAC-SHA256 signature
+    BE->>GH: Fetch PR diff + file context
+    GH-->>BE: Diff + surrounding code
+    BE->>BE: Chunk into token-safe windows
+    BE->>AI: Analyze with gpt-4o-mini
+    AI-->>BE: Structured JSON findings
+    BE->>DB: Save review + findings
+    BE->>GH: Post inline PR review
+    GH-->>Dev: Review notification ✅
+    FE->>BE: GET /api/repos, /api/reviews
+    BE-->>FE: Reviews + stats
 ```
 
 **5 steps, fully automated:**
@@ -100,47 +138,29 @@ This tool bridges the gap. It doesn't replace human reviewers — it gives them 
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        GitHub                                   │
-│  ┌─────────────┐    pull_request    ┌──────────────────────┐   │
-│  │  Developer  │ ──── event ──────▶ │   GitHub App         │   │
-│  │  opens PR   │                    │   (Webhook trigger)  │   │
-│  └─────────────┘                    └──────────┬───────────┘   │
-└─────────────────────────────────────────────────┼───────────────┘
-                                                  │ POST /webhook
-                                                  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     Backend (Node.js + Express)                 │
-│                                                                 │
-│  ┌──────────────┐   ┌───────────────┐   ┌──────────────────┐  │
-│  │  Webhook     │   │  GitHub API   │   │  Analysis        │  │
-│  │  Handler     │──▶│  Client       │──▶│  Orchestrator    │  │
-│  │  (verify +   │   │  (fetch diff  │   │  (chunk, context,│  │
-│  │   enqueue)   │   │   + context)  │   │   prompt, parse) │  │
-│  └──────────────┘   └───────────────┘   └────────┬─────────┘  │
-│                                                   │            │
-│  ┌──────────────────────────────┐                 │            │
-│  │  OpenAI API (gpt-4o-mini)   │◀────────────────┘            │
-│  │  Structured JSON output      │                              │
-│  └──────────────┬───────────────┘                              │
-│                 │ findings[]                                    │
-│                 ▼                                              │
-│  ┌──────────────────────┐   ┌────────────────────────────┐   │
-│  │  GitHub Review       │   │  MongoDB Atlas             │   │
-│  │  Poster              │   │  (Reviews + Findings store) │   │
-│  │  (inline PR comments)│   └────────────────────────────┘   │
-│  └──────────────────────┘                                      │
-└─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ REST API (/api/*)
-                                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  Dashboard (React + Vite on Vercel)             │
-│  • Repo overview + severity stats  • PR drilldown + findings   │
-│  • SVG trend charts                • Category breakdown         │
-│  • Recent activity feed            • Direct GitHub PR links     │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Dev([👨‍💻 Developer]) -->|opens PR| GH[GitHub]
+    GH -->|pull_request webhook| WH
+
+    subgraph BE["⚙️ Backend — Node.js + Express on Render"]
+        WH["🔐 Webhook Handler\nverify + enqueue"]
+        WH --> GHC["📥 GitHub API Client\nfetch diff + context"]
+        GHC --> AO["🧠 Analysis Orchestrator\nchunk · prompt · parse"]
+        AO --> OAI["✨ OpenAI gpt-4o-mini\nStructured JSON output"]
+        OAI --> RP["💬 Review Poster\npost inline PR comments"]
+        OAI --> DB[("🗄️ MongoDB Atlas\nReviews + Findings")]
+    end
+
+    RP -->|inline review comments| GH
+    GH -->|notification| Dev
+    DB --> API["REST API /api/*"]
+
+    subgraph FE["🖥️ Dashboard — React + Vite on Vercel"]
+        API --> OV["📊 Repo Overview\n+ Severity Stats"]
+        API --> PR["🔍 PR Drilldown\n+ Finding Details"]
+        API --> CH["📈 Trend Charts\n+ Activity Feed"]
+    end
 ```
 
 ---
@@ -485,6 +505,6 @@ MIT — see [LICENSE](LICENSE).
 
 Built by [Dev Agarwal](https://github.com/devagarwal2503) · July – August 2026
 
-[🚀 Live Demo](https://ai-powered-code-review-assistant-ten.vercel.app) · [⭐ Star on GitHub](https://github.com/devagarwal2503/AI-Powered-Code-Review-Assistant)
+[🚀 Live Demo](https://ai-powered-code-review-assistant-ten.vercel.app) · [⚙️ Install Scrutineer](https://github.com/apps/scrutineer-ai) · [⭐ Star on GitHub](https://github.com/devagarwal2503/Scrutineer-AI)
 
 </div>
