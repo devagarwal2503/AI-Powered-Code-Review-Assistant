@@ -1,22 +1,28 @@
 import { useState } from 'react';
-import { SeverityBadge } from './ui.jsx';
+import { SeverityBadge, CategoryBadge } from './ui.jsx';
 
-const CAT_COLORS = {
-  security:     '#f87171',
-  'bug-risk':   '#fbbf24',
-  architecture: '#c084fc',
-  performance:  '#34d399',
-  style:        '#818cf8',
-};
-
+/**
+ * FindingCard — matches the reference design exactly:
+ *
+ * ┌──────────────────────────────────────────────────────┐
+ * │ [● HIGH] [SECURITY]  Title text         src/x.js:2 ▼ │
+ * ├──────────────────────────────────────────────────────┤
+ * │ EXPLANATION                                          │
+ * │ The explanation text...                              │
+ * │                                                      │
+ * │ SUGGESTION                                           │
+ * │ ┌────────────────────────────────────────────────┐   │
+ * │ │ Suggestion text or code snippet                │   │
+ * │ └────────────────────────────────────────────────┘   │
+ * └──────────────────────────────────────────────────────┘
+ */
 export function FindingCard({ finding, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
-
-  const catColor = CAT_COLORS[finding.category] || 'var(--accent-3)';
   const loc = finding.line ? `${finding.file}:${finding.line}` : finding.file;
 
   return (
-    <div className={`finding sev-${finding.severity}`}>
+    <div className={`finding s-${finding.severity}`}>
+      {/* Header row */}
       <div
         className="finding-top"
         onClick={() => setOpen(o => !o)}
@@ -24,42 +30,40 @@ export function FindingCard({ finding, defaultOpen = false }) {
         aria-expanded={open}
         id={`finding-${finding._id}`}
       >
-        <SeverityBadge severity={finding.severity} />
-
-        <span
-          style={{
-            padding: '0.15rem 0.5rem',
-            borderRadius: 'var(--r-sm)',
-            fontSize: '0.67rem',
-            fontWeight: 700,
-            background: `${catColor}15`,
-            color: catColor,
-            border: `1px solid ${catColor}30`,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {finding.category}
-        </span>
+        {/* Severity + category badges — separate pills like the reference */}
+        <div className="finding-badges">
+          <SeverityBadge severity={finding.severity} />
+          <CategoryBadge category={finding.category} />
+        </div>
 
         <span className="finding-title">{finding.title}</span>
 
-        <span className="finding-loc">{loc}</span>
+        {/* File location pill */}
+        <span className="file-pill" title={loc}>
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          {loc}
+        </span>
 
-        <span className={`finding-chevron ${open ? 'open' : ''}`}>▼</span>
+        <span className={`finding-chevron${open ? ' open' : ''}`}>▼</span>
       </div>
 
+      {/* Expanded body */}
       {open && (
         <div className="finding-body">
+          {/* Explanation */}
           <div>
-            <p className="finding-field-label">Explanation</p>
-            <p className="finding-explanation">{finding.explanation}</p>
+            <p className="field-lbl">Explanation</p>
+            <p className="field-text">{finding.explanation}</p>
           </div>
+
+          {/* Suggestion */}
           {finding.suggestion && (
             <div>
-              <p className="finding-field-label">Suggestion</p>
-              <div className="finding-suggestion">{finding.suggestion}</div>
+              <p className="field-lbl">Suggestion</p>
+              <div className="field-code">{finding.suggestion}</div>
             </div>
           )}
         </div>

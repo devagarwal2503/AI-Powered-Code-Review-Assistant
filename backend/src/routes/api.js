@@ -17,6 +17,7 @@ const {
   getReviewsForRepo,
   getReviewById,
   getRepoStats,
+  getRecentReviews,
 } = require('../review/reviewStore');
 const logger = require('../utils/logger');
 
@@ -89,6 +90,22 @@ router.get('/reviews/:reviewId', async (req, res) => {
   } catch (err) {
     logger.error('GET /api/reviews/:reviewId failed', { reviewId, error: err.message });
     res.status(500).json({ error: 'Failed to fetch review' });
+  }
+});
+
+// ─── GET /api/recent ─────────────────────────────────────────────────────────
+// Returns most recent reviews across all repos.
+// Query params: limit (default 8, max 20)
+// Used by: Dashboard "Recent Analysis" activity feed
+
+router.get('/recent', async (req, res) => {
+  const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 8));
+  try {
+    const reviews = await getRecentReviews(limit);
+    res.json({ reviews });
+  } catch (err) {
+    logger.error('GET /api/recent failed', { error: err.message });
+    res.status(500).json({ error: 'Failed to fetch recent reviews' });
   }
 });
 

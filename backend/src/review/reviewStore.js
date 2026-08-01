@@ -209,6 +209,20 @@ async function listTrackedRepos() {
   ]);
 }
 
+/**
+ * Gets the most recent reviews across ALL repos.
+ * Used by the dashboard "Recent Analysis" activity feed.
+ *
+ * @param {number} limit - max number to return
+ */
+async function getRecentReviews(limit = 8) {
+  return Review.find({})
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .select('owner repo repoFullName pullNumber prTitle headSha findingCounts reviewPosted analyzedAt createdAt')
+    .lean();
+}
+
 module.exports = {
   saveReview,
   markReviewPosted,
@@ -217,4 +231,5 @@ module.exports = {
   getReviewById,
   getRepoStats,
   listTrackedRepos,
+  getRecentReviews,
 };

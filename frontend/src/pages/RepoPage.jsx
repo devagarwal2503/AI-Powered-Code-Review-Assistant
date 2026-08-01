@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../services/api.js';
 import {
-  Spinner, EmptyState, ErrorState,
-  SeverityCounts, Breadcrumb, timeAgo,
-  IconGitHub, IconExternalLink, prUrl
+  Spinner, EmptyState, ErrorState, SeverityRow, Breadcrumb,
+  timeAgo, IcoGitHub, IcoExternal, prUrl, IcoAI, IcoClock
 } from '../components/ui.jsx';
 import { CategoryChart, TrendChart } from '../components/Charts.jsx';
 
@@ -12,106 +11,80 @@ export default function RepoPage() {
   const { owner, repo } = useParams();
 
   const [reviews, setReviews]     = useState([]);
-  const [stats, setStats]         = useState(null);
+  const [stats,   setStats]       = useState(null);
   const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
-  const [page, setPage]           = useState(1);
-  const [pagination, setPagination] = useState({});
+  const [error,   setError]       = useState(null);
+  const [page,    setPage]        = useState(1);
+  const [pages,   setPages]       = useState(1);
+  const [total,   setTotal]       = useState(0);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    Promise.all([
-      api.getReviews(owner, repo, page),
-      api.getRepoStats(owner, repo),
-    ])
-      .then(([rev, st]) => {
-        setReviews(rev.reviews || []);
-        setPagination({ total: rev.total, pages: rev.pages });
+    setLoading(true); setError(null);
+    Promise.all([api.getReviews(owner, repo, page), api.getRepoStats(owner, repo)])
+      .then(([rv, st]) => {
+        setReviews(rv.reviews || []);
+        setPages(rv.pages || 1); setTotal(rv.total || 0);
         setStats(st);
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [owner, repo, page]);
 
-  const repoFull = `${owner}/${repo}`;
-
   return (
     <div className="page">
-      <Breadcrumb items={[
-        { label: 'Dashboard', href: '/' },
-        { label: repoFull },
-      ]} />
+      <Breadcrumb items={[{ label: 'Dashboard', href: '/' }, { label: `${owner}/${repo}` }]} />
 
-      {/* Repo hero */}
-      <div className="hero fade-up">
-        <p className="hero-label"><span className="hero-label-dot" /> Repository</p>
-        <h1 className="hero-title">{repo}</h1>
-        <p className="hero-sub" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.85rem' }}>
-          {repoFull}
+      <div className="hero fu">
+        <p className="hero-tag"><span className="hero-dot" />Repository</p>
+        <h1 className="hero-h1">{repo}</h1>
+        <p className="hero-sub" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '0.84rem' }}>
+          {owner}/{repo}
         </p>
       </div>
 
       {/* Stats */}
       {stats && (
-        <div className="stats-row fade-up delay-1" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-          <div className="stat accent">
-            <p className="stat-label">Total Reviews</p>
-            <p className="stat-value accent">{stats.summary?.totalReviews || 0}</p>
-          </div>
-          <div className="stat">
-            <p className="stat-label">Total Findings</p>
-            <p className="stat-value">{stats.summary?.totalFindings || 0}</p>
-          </div>
-          <div className="stat danger">
-            <p className="stat-label">High Severity</p>
-            <p className="stat-value danger">{stats.summary?.totalHigh || 0}</p>
-          </div>
+        <div className="stats-grid fu d1" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+          {[
+            { label: 'Total Reviews',  val: stats.summary?.totalReviews  || 0, cls: 'brand'  },
+            { label: 'Total Findings', val: stats.summary?.totalFindings || 0, cls: ''       },
+            { label: 'High Severity',  val: stats.summary?.totalHigh     || 0, cls: 'danger', border: 'danger' },
+          ].map(s => (
+            <div key={s.label} className={`stat-card ${s.border || ''}`}>
+              <p className="stat-lbl">{s.label}</p>
+              <p className={`stat-val ${s.cls}`}>{s.val}</p>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Charts */}
       {stats && (
-        <div className="two-col fade-up delay-2">
-          <div className="card">
-            <p className="card-title">Findings by Category</p>
-            <CategoryChart data={stats.categoryBreakdown} />
-          </div>
-          <div className="card">
-            <p className="card-title">Severity Trend — 30 Days</p>
-            <TrendChart data={stats.severityTrend} />
-          </div>
+        <div className="two-col fu d2">
+          <div className="card"><p className="card-title">Findings by Category</p><CategoryChart data={stats.categoryBreakdown} /></div>
+          <div className="card"><p className="card-title">Severity Trend — 30 Days</p><TrendChart data={stats.severityTrend} /></div>
         </div>
       )}
 
       {/* Reviews list */}
-      <div className="section fade-up delay-3">
-        <div className="section-head">
-          <h2 className="section-title">Pull Request Reviews</h2>
-          {pagination.total > 0 && (
-            <span className="section-count">{pagination.total} total</span>
-          )}
+      <div className="fu d3">
+        <div className="sec-head">
+          <h2 className="sec-title">Pull Request Reviews</h2>
+          {total > 0 && <span className="sec-count">{total} total</span>}
         </div>
 
         {loading && <Spinner />}
         {error   && <ErrorState message={error} />}
 
         {!loading && !error && reviews.length === 0 && (
-          <EmptyState
-            icon="◇"
-            title="No reviews yet"
-            text="Open a pull request on this repository to trigger an AI analysis."
-          />
+          <EmptyState icon="◇" title="No reviews yet" text="Open a pull request on this repository." />
         )}
 
         {!loading && !error && reviews.length > 0 && (
           <>
             <div className="review-list">
               {reviews.map(review => (
-                <div
-                  key={review._id}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}
-                >
+                <div key={review._id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Link
                     to={`/reviews/${review._id}`}
                     className="review-row"
@@ -120,37 +93,30 @@ export default function RepoPage() {
                   >
                     <span className="review-pr-num">#{review.pullNumber}</span>
                     <span className="review-title">{review.prTitle || 'Untitled PR'}</span>
-                    <SeverityCounts counts={review.findingCounts} />
-                    <span className="review-sha">{review.headSha?.slice(0, 7)}</span>
-                    <span className="review-time">{timeAgo(review.createdAt)}</span>
+                    <SeverityRow counts={review.findingCounts} />
+                    <span className="sha-pill">{review.headSha?.slice(0, 7)}</span>
+                    <span className="time-label">{timeAgo(review.createdAt)}</span>
                   </Link>
 
-                  {/* Direct GitHub PR link */}
+                  {/* GitHub PR link — prominent per the reference */}
                   <a
                     href={prUrl(owner, repo, review.pullNumber)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="gh-btn gh-btn-sm"
-                    title="View PR on GitHub"
-                    id={`gh-link-${review._id}`}
+                    id={`gh-${review._id}`}
+                    title="View on GitHub"
                   >
-                    <IconGitHub /> View PR <IconExternalLink />
+                    <IcoGitHub /> View PR <IcoExternal />
                   </a>
                 </div>
               ))}
             </div>
 
-            {pagination.pages > 1 && (
+            {pages > 1 && (
               <div className="pagination">
-                {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    id={`page-${p}`}
-                    className={`pg-btn${p === page ? ' active' : ''}`}
-                  >
-                    {p}
-                  </button>
+                {Array.from({ length: pages }, (_, i) => i + 1).map(p => (
+                  <button key={p} onClick={() => setPage(p)} id={`pg-${p}`} className={`pg-btn${p === page ? ' on' : ''}`}>{p}</button>
                 ))}
               </div>
             )}

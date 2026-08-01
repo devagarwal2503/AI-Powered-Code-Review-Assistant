@@ -32,4 +32,8 @@ export const api = {
   /** Returns a single review with all findings */
   getReview: (reviewId) =>
     request(`/reviews/${reviewId}`).then(d => d.review),
+
+  /** Returns most recent reviews across all repos (activity feed) */
+  getRecent: (limit = 8) =>
+    request(`/recent?limit=${limit}`).then(d => d.reviews),
 };
