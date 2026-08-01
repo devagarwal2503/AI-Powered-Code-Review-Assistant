@@ -1,0 +1,70 @@
+name: CI
+
+# Run on every push and on every pull request targeting main.
+# The goal: catch broken builds and lint errors before they land on main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend — syntax + dependency check ──────────────────────────────────────
+  backend:
+    name: Backend — Install & Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      # Node's built-in syntax checker — catches obvious parse errors in every file.
+      # We don't run full tests here because they require live MongoDB/GitHub creds.
+      - name: Syntax check all backend source files
+        working-directory: backend
+        run: node --check src/app.js src/github/auth.js src/github/api.js src/review/reviewStore.js src/review/reviewPoster.js src/routes/api.js src/routes/webhook.js
+
+  # ── Frontend — lint + production build ───────────────────────────────────────
+  frontend:
+    name: Frontend — Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # oxlint is the configured linter (see frontend/package.json)
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      # Vite build — catches all JSX/import errors and produces the dist/ bundle.
+      # VITE_API_URL is set to a placeholder: the build itself doesn't call the API,
+      # we just need the env var defined so import.meta.env.VITE_API_URL isn't undefined.
+      - name: Build (production bundle)
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://placeholder.onrender.com
+        run: npm run build

@@ -37,14 +37,22 @@ const app = express();
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
 
-// CORS: allow the frontend (Vite dev server on :5173, or Vercel in prod)
-// to call our API. We'll tighten the origin list in Phase 5.
+// CORS — allow the frontend to call our API.
+// FRONTEND_URL is set on Render in production (comma-separated for multiple origins).
+// In dev the Vite proxy handles this, but we still allow localhost:5173 as a fallback.
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin:
-      config.NODE_ENV === 'production'
-        ? process.env.FRONTEND_URL // set on Render in Phase 5
-        : 'http://localhost:5173', // Vite default port
+    origin: (origin, cb) => {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS: origin ${origin} not allowed`));
+    },
     methods: ['GET', 'POST'],
   })
 );

@@ -1,0 +1,56 @@
+# render.yaml — Render Infrastructure as Code
+#
+# Render reads this file from the root of the connected GitHub repo.
+# When you push to main, Render auto-deploys the service defined here.
+#
+# Secrets (MONGODB_URI, GITHUB_APP_PRIVATE_KEY, etc.) are NOT stored here —
+# they go in the Render dashboard under Environment → Secret Files / Env Vars.
+# This file contains only non-secret configuration.
+#
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: ai-code-review-backend
+    env: node
+    region: oregon          # Free tier available in Oregon
+    plan: free
+
+    # rootDir tells Render to treat backend/ as the working directory
+    # for all commands below. This keeps the monorepo structure intact.
+    rootDir: backend
+
+    buildCommand: npm ci
+    startCommand: node src/app.js
+
+    # Health check — Render pings this every 30s.
+    # If it returns non-2xx, Render marks the service unhealthy.
+    healthCheckPath: /health
+
+    # Auto-deploy when main branch is pushed
+    autoDeploy: true
+
+    envVars:
+      # Non-secret config — safe to store here
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: PORT
+        value: 3000
+
+      # Secrets — set these manually in the Render dashboard
+      # (Environment → Add Environment Variable)
+      # Do NOT paste actual values here.
+      - key: MONGODB_URI
+        sync: false         # "sync: false" = Render will prompt you to fill this in
+      - key: GITHUB_APP_ID
+        sync: false
+      - key: GITHUB_APP_PRIVATE_KEY
+        sync: false         # Paste the full PEM file content here
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false         # Your Vercel URL, e.g. https://ai-code-review.vercel.app

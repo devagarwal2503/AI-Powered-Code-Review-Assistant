@@ -42,25 +42,37 @@ const tokenCache = new Map();
 
 /**
  * Reads and signs a short-lived JWT to authenticate as the GitHub App.
- * This JWT is NOT the installation token — it's just used to exchange
- * for one.
+ *
+ * Private key source (checked in order):
+ * 1. GITHUB_APP_PRIVATE_KEY env var — the full PEM content as a string.
+ *    Use this in production (Render, etc.) where you can't upload files.
+ *    Render stores multi-line env vars as-is. If yours uses literal \n
+ *    instead of real newlines (some CI systems do this), we replace them.
+ * 2. GITHUB_APP_PRIVATE_KEY_PATH — path to a .pem file on disk.
+ *    Use this in local development.
  */
 function createAppJWT() {
-  const privateKeyPath = path.resolve(config.GITHUB_APP_PRIVATE_KEY_PATH);
+  let privateKey;
 
-  if (!fs.existsSync(privateKeyPath)) {
-    throw new Error(
-      `GitHub App private key not found at: ${privateKeyPath}\n` +
-        'Download it from your GitHub App settings and place it at the configured path.'
-    );
+  if (process.env.GITHUB_APP_PRIVATE_KEY) {
+    // Env var — may have literal '\n' strings (some deployment platforms
+    // escape newlines when setting env vars). Replace them with real newlines.
+    privateKey = process.env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n');
+  } else {
+    const privateKeyPath = path.resolve(config.GITHUB_APP_PRIVATE_KEY_PATH);
+    if (!fs.existsSync(privateKeyPath)) {
+      throw new Error(
+        `GitHub App private key not found.\n` +
+          `Set GITHUB_APP_PRIVATE_KEY env var (PEM string) OR place the .pem file at: ${privateKeyPath}`
+      );
+    }
+    privateKey = fs.readFileSync(privateKeyPath, 'utf8');
   }
 
-  const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
   const nowSeconds = Math.floor(Date.now() / 1000);
-
   const payload = {
-    iat: nowSeconds - 60,       // issued 60s ago (clock drift buffer)
-    exp: nowSeconds + (9 * 60), // expires in 9 minutes (GitHub max is 10)
+    iat: nowSeconds - 60,       // 60s in the past (clock drift buffer)
+    exp: nowSeconds + (9 * 60), // expires in 9 min (GitHub max = 10)
     iss: String(config.GITHUB_APP_ID),
   };
 
