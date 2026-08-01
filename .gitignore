@@ -42,3 +42,6 @@ coverage/
 # OS
 .DS_Store
 Desktop.ini
+
+# Local test files (used to trigger the AI reviewer — live in ai-review-test repo)
+test-files/
