@@ -12,16 +12,16 @@
 
 [![CI](https://github.com/devagarwal2503/Scrutineer-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/devagarwal2503/Scrutineer-AI/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22+-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/cloud/atlas)
 [![OpenAI](https://img.shields.io/badge/OpenAI-gpt--4o--mini-412991?logo=openai&logoColor=white)](https://openai.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render&logoColor=black)](https://ai-code-review-backend-dsot.onrender.com/health)
-[![Vercel](https://img.shields.io/badge/Frontend-Vercel-000000?logo=vercel&logoColor=white)](https://ai-powered-code-review-assistant-ten.vercel.app)
+[![Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render&logoColor=black)](https://scrutineer-ai-backend.onrender.com/health)
+[![Vercel](https://img.shields.io/badge/Frontend-Vercel-000000?logo=vercel&logoColor=white)](https://scrutineer-ai.vercel.app)
 
 <br />
 
-[🚀 Live Dashboard](https://ai-powered-code-review-assistant-ten.vercel.app) · [📡 API Health](https://ai-code-review-backend-dsot.onrender.com/health) · [⚙️ Install Scrutineer](https://github.com/apps/scrutineer-ai) · [🐛 Issues](https://github.com/devagarwal2503/Scrutineer-AI/issues)
+[🚀 Live Dashboard](https://scrutineer-ai.vercel.app) · [📡 API Health](https://scrutineer-ai-backend.onrender.com/health) · [⚙️ Install Scrutineer](https://github.com/apps/scrutineer-ai) · [🐛 Issues](https://github.com/devagarwal2503/Scrutineer-AI/issues)
 
 <br />
 
@@ -33,8 +33,8 @@
 
 | Service | URL | Status |
 |---|---|---|
-| 🌐 Dashboard | [ai-powered-code-review-assistant-ten.vercel.app](https://ai-powered-code-review-assistant-ten.vercel.app) | ✅ Live |
-| 📡 Backend API | [ai-code-review-backend-dsot.onrender.com](https://ai-code-review-backend-dsot.onrender.com/health) | ✅ Live |
+| 🌐 Dashboard | [scrutineer-ai.vercel.app](https://scrutineer-ai.vercel.app) | ✅ Live |
+| 📡 Backend API | [scrutineer-ai-backend.onrender.com](https://scrutineer-ai-backend.onrender.com/health) | ✅ Live |
 
 > ⚡ **Cold start note:** The backend runs on Render's free tier. The first request after a period of inactivity may take ~30 seconds to wake up — subsequent requests are fast. This doesn't affect webhook delivery; GitHub retries for up to 3 days.
 
@@ -54,7 +54,7 @@
 2. Open (or push to) any pull request on those repos
 3. Scrutineer automatically analyzes the diff — no action needed from you
 4. Inline review comments appear on the **Files Changed** tab within seconds
-5. The findings are visible in the [live dashboard](https://ai-powered-code-review-assistant-ten.vercel.app) under your repo name
+5. The findings are visible in the [live dashboard](https://scrutineer-ai.vercel.app) under your repo name
 
 ### What gets analyzed
 
@@ -169,7 +169,7 @@ flowchart TD
 
 | Layer | Technology | Reason |
 |---|---|---|
-| Backend | Node.js 18 + Express | Production-familiar, async-first, no framework overhead |
+| Backend | Node.js 22 + Express | Production-familiar, async-first, no framework overhead |
 | Database | MongoDB Atlas (free tier) | Flexible schema for findings; native `$unwind`/`$group` for trend aggregation |
 | Frontend | React 19 + Vite | Fast dev experience; no SSR complexity needed |
 | AI | OpenAI `gpt-4o-mini` | Structured JSON output (`response_format`), cost-effective, fast |
@@ -244,7 +244,7 @@ ai-code-review-assistant/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - A GitHub account (to create and install the GitHub App)
 - An OpenAI API key
 - [ngrok](https://ngrok.com/) — for local webhook testing
@@ -505,6 +505,6 @@ MIT — see [LICENSE](LICENSE).
 
 Built by [Dev Agarwal](https://github.com/devagarwal2503) · July – August 2026
 
-[🚀 Live Demo](https://ai-powered-code-review-assistant-ten.vercel.app) · [⚙️ Install Scrutineer](https://github.com/apps/scrutineer-ai) · [⭐ Star on GitHub](https://github.com/devagarwal2503/Scrutineer-AI)
+[🚀 Live Demo](https://scrutineer-ai.vercel.app) · [⚙️ Install Scrutineer](https://github.com/apps/scrutineer-ai) · [⭐ Star on GitHub](https://github.com/devagarwal2503/Scrutineer-AI)
 
 </div>
