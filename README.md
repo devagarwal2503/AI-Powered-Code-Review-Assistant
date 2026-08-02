@@ -21,7 +21,7 @@
 
 <br />
 
-[🚀 Live Dashboard](https://scrutineer-ai.vercel.app) · [📡 API Health](https://scrutineer-ai-backend.onrender.com/health) · [⚙️ Install Scrutineer](https://github.com/apps/scrutineer-ai) · [🐛 Issues](https://github.com/devagarwal2503/Scrutineer-AI/issues)
+[🌐 Landing Page](https://scrutineer-ai.vercel.app) · [🚀 Dashboard](https://scrutineer-ai.vercel.app/dashboard) · [📡 API Health](https://scrutineer-ai-backend.onrender.com/health) · [⚙️ Install Scrutineer AI](https://github.com/apps/scrutineer-ai) · [🐛 Issues](https://github.com/devagarwal2503/Scrutineer-AI/issues)
 
 <br />
 
@@ -33,7 +33,8 @@
 
 | Service | URL | Status |
 |---|---|---|
-| 🌐 Dashboard | [scrutineer-ai.vercel.app](https://scrutineer-ai.vercel.app) | ✅ Live |
+| 🌐 Landing Page | [scrutineer-ai.vercel.app](https://scrutineer-ai.vercel.app) | ✅ Live |
+| 📊 Dashboard | [scrutineer-ai.vercel.app/dashboard](https://scrutineer-ai.vercel.app/dashboard) | ✅ Live |
 | 📡 Backend API | [scrutineer-ai-backend.onrender.com](https://scrutineer-ai-backend.onrender.com/health) | ✅ Live |
 
 > ⚡ **Cold start note:** The backend runs on Render's free tier. The first request after a period of inactivity may take ~30 seconds to wake up — subsequent requests are fast. This doesn't affect webhook delivery; GitHub retries for up to 3 days.
@@ -297,7 +298,7 @@ Then open [http://localhost:5173](http://localhost:5173).
 
 ## 📊 Benchmark Results
 
-> Running the tool against real open-source PRs to compare AI findings against actual human reviewer comments — Phase 6.
+> Running the tool against real open-source PRs to compare AI findings against actual human reviewer comments — Phase 7.
 
 | Metric | Result |
 |---|---|
@@ -324,8 +325,9 @@ Then open [http://localhost:5173](http://localhost:5173).
 | **Phase 2** — AI Analysis | Diff chunker, context fetcher, prompt builder, OpenAI structured output, analysis orchestrator | ✅ Complete | Jul 2026 |
 | **Phase 3** — Post & Store | GitHub PR review comment poster, MongoDB persistence layer | ✅ Complete | Jul 2026 |
 | **Phase 4** — Dashboard | React dashboard, REST API endpoints, pure-SVG charts, PR drilldown, "View on GitHub" links, full custom design system | ✅ Complete | Jul 2026 |
-| **Phase 5** — CI/CD & Deploy | GitHub Actions CI (lint + build), Render backend deploy, Vercel frontend deploy, CORS production config, RSA private key via env var, live test: 26 findings on first PR | ✅ Complete | Aug 2026 |
-| **Phase 6** — Benchmark | 15–20 PR analysis, overlap metrics, resume bullets | ⏳ Upcoming | — |
+| **Phase 5** — CI/CD & Deploy | GitHub Actions CI (lint + build), Render backend deploy, Vercel frontend deploy, CORS production config, RSA private key via env var, live test: **26 findings on first PR** | ✅ Complete | Aug 2026 |
+| **Phase 6** — Branding & Landing | GitHub App renamed → `scrutineer-ai`, SVG logo component, Mermaid diagrams replacing ASCII art, README overhaul, public landing page with Hero / HowItWorks / Features / WhatItCatches / CTA / Footer | ✅ Complete | Aug 2026 |
+| **Phase 7** — Benchmark | 15–20 PR analysis, overlap metrics, precision/recall, resume bullets | ⏳ Upcoming | — |
 
 ---
 
@@ -348,6 +350,9 @@ Then open [http://localhost:5173](http://localhost:5173).
 | RSA private key as environment variable | Phase 5 | PaaS platforms use ephemeral filesystems — files disappear on redeploy. Solution: store the full PEM content (including `-----BEGIN RSA PRIVATE KEY-----` header/footer) as a string environment variable. Some platforms escape newlines as `\n` — detect and replace with `key.replace(/\\n/g, '\n')` before passing to `jwt.sign()`. |
 | PaaS cold start on free tier | Phase 5 | Render's free tier spins down after 15 min of inactivity. Wake-up adds ~30s latency. This doesn't affect webhook delivery — GitHub retries for up to 3 days. Workaround: UptimeRobot pings `/health` every 14 min (free). |
 | Vite build-time environment variables | Phase 5 | Vite only exposes `VITE_`-prefixed env vars to client-side code (`import.meta.env.VITE_*`). The value is baked into the bundle at build time, not read dynamically at runtime. If `VITE_API_URL` changes on Vercel, a redeploy is required to pick up the new value. |
+| GitHub App slug vs. user account namespace | Phase 5–6 | GitHub App slugs share the same namespace as user accounts for the install URL (`github.com/apps/[slug]`). If `@[name]` exists as a user, that slug is unavailable for an App. Solution: add a distinguishing suffix (`-ai`, `-app`, `-hq`). Test slug availability before committing to a brand name. |
+| Inline SVG vs. PNG for UI logos | Phase 6 | PNG logos blur when scaled below their native resolution. Inline SVG scales losslessly at any pixel density, can inherit CSS `color`, needs no network request, and is trivially animated. Rule: use SVG for any icon or logo rendered in the UI; use raster formats only for photographs and complex artwork. |
+| Mermaid diagrams in GitHub Markdown | Phase 6 | ASCII art box-drawing characters render with variable-width fonts on GitHub, breaking alignment. GitHub natively renders `mermaid` fenced code blocks as SVG — `sequenceDiagram`, `flowchart TD`, `erDiagram`, etc. Zero dependencies, always aligned, matches the code font. |
 
 ---
 
@@ -465,6 +470,46 @@ function getOpenAIClient() {
 
 ---
 
+### Phase 5: GitHub App slug "scrutineer" reserved by existing user account
+**What happened:** After choosing the name `scrutineer` for the GitHub App, GitHub rejected it — `@scrutineer` already exists as a user account. GitHub App install URL slugs share the same namespace as user accounts.
+
+**Fix:** Added the `-ai` suffix → `scrutineer-ai`. Coincidentally a better name since it clearly communicates the AI nature of the tool. Install URL: `github.com/apps/scrutineer-ai`.
+
+**Lesson:** Coin names with a distinctive suffix from the start (`-ai`, `-app`, `-hq`). Test slug availability on `github.com/apps/[name]` before committing to a brand name. A user account taking a plain word is common.
+
+---
+
+### Phase 5: Vercel frontend still calling old Render URL after backend rename
+**What happened:** The Render backend service was renamed from `ai-code-review-backend` to `scrutineer-ai-backend`. The Vercel frontend dashboard continued showing empty data despite the backend being healthy.
+
+**Root cause:** `VITE_API_URL` was set to the old Render URL and Vite bakes env vars into the bundle at compile time. Changing the value in Vercel's dashboard has no effect until the next build.
+
+**Fix:** Updated `VITE_API_URL` in Vercel → triggered a redeploy. Updated `FRONTEND_URL` on Render to the new Vercel URL so CORS headers were correct.
+
+**Lesson:** Every URL change in a Vite frontend is a two-step process: (1) update the env var, (2) redeploy. Document this explicitly in the project README to avoid confusion during team handoffs.
+
+---
+
+### Phase 6: ASCII art diagrams misaligned on GitHub
+**What happened:** The "How It Works" and "Architecture" sections used box-drawing characters (`┌─┐│└┘`). On GitHub's rendered Markdown (variable-width font), the boxes were misaligned and visually broken.
+
+**Root cause:** Box-drawing works only in fixed-width terminals where every character is the same width. GitHub renders Markdown with a proportional font — character widths vary.
+
+**Fix:** Replaced both ASCII blocks with `mermaid` fenced code blocks. GitHub natively renders these as crisp SVGs — `sequenceDiagram` for the flow, `flowchart TD` for the architecture diagram.
+
+**Lesson:** Never use ASCII art for diagrams in GitHub Markdown. Use `mermaid` blocks — they render natively on GitHub with zero dependencies and are version-controllable plain text.
+
+---
+
+### Phase 6: PNG logo blurry at small navbar sizes
+**What happened:** The AI-generated logo (`logo.png`) was placed in the navbar at `height="28"`. At that size the PNG appeared blurry — raster images don't scale cleanly below their native resolution.
+
+**Fix:** Created `ScrutineerLogo.jsx` — an inline SVG React component with the magnifying glass icon, `</>` brackets, and the wordmark. SVG scales losslessly to any size, inherits CSS `color`, requires no network request, and can be animated with CSS.
+
+**Lesson:** Use SVG for all UI logos and icons. Reserve PNG/WebP for photographs and complex illustrations where vector representation is impractical.
+
+---
+
 ## 🎨 Frontend Architecture Decisions
 
 > Why each technical choice was made — for technical interviews.
@@ -505,6 +550,6 @@ MIT — see [LICENSE](LICENSE).
 
 Built by [Dev Agarwal](https://github.com/devagarwal2503) · July – August 2026
 
-[🚀 Live Demo](https://scrutineer-ai.vercel.app) · [⚙️ Install Scrutineer](https://github.com/apps/scrutineer-ai) · [⭐ Star on GitHub](https://github.com/devagarwal2503/Scrutineer-AI)
+[🌐 Landing Page](https://scrutineer-ai.vercel.app) · [🚀 Dashboard](https://scrutineer-ai.vercel.app/dashboard) · [⚙️ Install Scrutineer AI](https://github.com/apps/scrutineer-ai) · [⭐ Star on GitHub](https://github.com/devagarwal2503/Scrutineer-AI)
 
 </div>
