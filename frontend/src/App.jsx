@@ -1,28 +1,25 @@
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, NavLink, Link, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import Dashboard  from './pages/Dashboard.jsx';
-import RepoPage   from './pages/RepoPage.jsx';
-import ReviewPage from './pages/ReviewPage.jsx';
+import Dashboard      from './pages/Dashboard.jsx';
+import RepoPage       from './pages/RepoPage.jsx';
+import ReviewPage     from './pages/ReviewPage.jsx';
+import LandingPage    from './pages/LandingPage.jsx';
+import ScrutineerLogo from './components/ScrutineerLogo.jsx';
 import './index.css';
 
+/* ── App Navbar (shown only for /dashboard and sub-pages) ─────────────────── */
 function Navbar() {
   return (
     <header className="nav" role="banner">
       <div className="nav-inner">
-        {/* Logo — Scrutineer AI wordmark */}
-        <NavLink to="/" className="nav-brand" id="nav-home" aria-label="Scrutineer AI — home">
-          <img
-            src="/logo.png"
-            alt="Scrutineer AI"
-            height="28"
-            style={{ display: 'block', imageRendering: 'auto' }}
-          />
-        </NavLink>
+        {/* Logo → back to landing */}
+        <Link to="/" className="nav-brand" id="nav-home" aria-label="Scrutineer AI — home">
+          <ScrutineerLogo height={30} />
+        </Link>
 
         <nav className="nav-links" aria-label="Main navigation">
           <NavLink
-            to="/"
-            end
+            to="/dashboard"
             id="nav-dashboard"
             className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
           >
@@ -30,7 +27,7 @@ function Navbar() {
           </NavLink>
 
           <a
-            href="https://github.com"
+            href="https://github.com/devagarwal2503/Scrutineer-AI"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-gh-btn"
@@ -47,33 +44,50 @@ function Navbar() {
   );
 }
 
+/* ── Scroll-to-top on route change ───────────────────────────────────────── */
 function ScrollReset() {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
 }
 
+/* ── 404 page ────────────────────────────────────────────────────────────── */
+function NotFound() {
+  return (
+    <div className="page" style={{ textAlign: 'center', paddingTop: '5rem' }}>
+      <p style={{ fontSize: '3.5rem', fontWeight: 800, color: 'var(--t4)', letterSpacing: '-0.04em', marginBottom: '0.75rem' }}>404</p>
+      <p style={{ color: 'var(--t2)' }}>Page not found.</p>
+      <Link to="/" style={{ display: 'inline-block', marginTop: '1.5rem' }} className="gh-btn">← Home</Link>
+    </div>
+  );
+}
+
+/* ── App shell — Navbar + inner app routes ───────────────────────────────── */
+function AppShell() {
+  return (
+    <div className="app">
+      <Navbar />
+      <main>
+        <ScrollReset />
+        <Routes>
+          <Route path="/dashboard"             element={<Dashboard />}  />
+          <Route path="/repos/:owner/:repo"    element={<RepoPage />}   />
+          <Route path="/reviews/:reviewId"     element={<ReviewPage />} />
+          <Route path="*"                      element={<NotFound />}   />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
+/* ── Root — landing at /, app shell at /* ────────────────────────────────── */
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="app">
-        <Navbar />
-        <main>
-          <ScrollReset />
-          <Routes>
-            <Route path="/"                   element={<Dashboard />}  />
-            <Route path="/repos/:owner/:repo" element={<RepoPage />}   />
-            <Route path="/reviews/:reviewId"  element={<ReviewPage />} />
-            <Route path="*" element={
-              <div className="page" style={{ textAlign: 'center', paddingTop: '5rem' }}>
-                <p style={{ fontSize: '3.5rem', fontWeight: 800, color: 'var(--t4)', letterSpacing: '-0.04em', marginBottom: '0.75rem' }}>404</p>
-                <p style={{ color: 'var(--t2)' }}>Page not found.</p>
-                <NavLink to="/" style={{ display: 'inline-block', marginTop: '1.5rem' }} className="gh-btn">← Dashboard</NavLink>
-              </div>
-            } />
-          </Routes>
-        </main>
-      </div>
+      <Routes>
+        <Route path="/"   element={<LandingPage />} />
+        <Route path="/*"  element={<AppShell />}    />
+      </Routes>
     </BrowserRouter>
   );
 }
